@@ -1,5 +1,13 @@
 #!/bin/zsh
 
+# copy the netBeans projects so i can push them to get hub
+yes | cp -R ~/Documents/School/TCSS-558/Assignment_2_558_v1/Client \
+~/Desktop/a1_Dockerfiles/assignment_2/netBeans
+
+yes | cp -R ~/Documents/School/TCSS-558/Assignment_2_558_v1/Server \
+~/Desktop/a1_Dockerfiles/assignment_2/netBeans
+
+# copy the jars to where i want to use them
 yes | cp ~/Documents/School/TCSS-558/Assignment_2_558_v1/Client/GenericNode/dist/GenericNode.jar \
 ~/Desktop/a1_Dockerfiles/assignment_2/docker_client
 
