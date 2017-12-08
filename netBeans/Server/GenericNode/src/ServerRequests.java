@@ -21,9 +21,8 @@ public class ServerRequests {
     private String myKey;
     private String myValue;
     private int commitConfirmed;
-    
-    public void ServerRequsets(String machineName, int portNumber)
-    {
+
+    ServerRequests(String myIpAddress, Integer myPort) {
         this.machineName = machineName;
         this.portNumber = portNumber;
         commitConfirmed = -1;       

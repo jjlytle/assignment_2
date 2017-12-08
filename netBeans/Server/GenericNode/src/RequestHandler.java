@@ -27,40 +27,40 @@ public class RequestHandler extends Thread
             switch(inputArray[0])
             {
                 case "put":
-                    putRequestRecieved(myClientInput,myServerOutput, inputArray);
+                    putRequestRecieved(myClientInput, myServerOutput, inputArray);
                     break;
                 case "get":
-                    getRequestRecieved(myClientInput,myServerOutput, inputArray);
+                    getRequestRecieved(myClientInput, myServerOutput, inputArray);
                     break;
                 case "del":
-                    delRequestRecieved(myClientInput,myServerOutput, inputArray);
+                    delRequestRecieved(myClientInput, myServerOutput, inputArray);
                     break;
                 case "store":
-                    storeRequestRecieved(myClientInput,myServerOutput, inputArray);
+                    storeRequestRecieved(myClientInput, myServerOutput, inputArray);
                     break;
                 case "exit":
-                    exitRequestRecieved(myClientInput,myServerOutput, inputArray);
+                    exitRequestRecieved(myClientInput, myServerOutput, inputArray);
                     break;
                 case "dput1":
-                    dput1RequestRecieved(myClientInput,myServerOutput, inputArray);
+                    dput1RequestRecieved(myClientInput, myServerOutput, inputArray);
                     break;
                 case "dput2":
-                    dput2RequestRecieved(myClientInput,myServerOutput, inputArray);
+                    dput2RequestRecieved(myClientInput, myServerOutput, inputArray);
                     break;
                 case "dputabort":
-                    dputabortRequestRecieved(myClientInput,myServerOutput, inputArray);
+                    dputabortRequestRecieved(myClientInput, myServerOutput, inputArray);
                     break;
                 case "ddel1":
-                    ddel1RequestRecieved(myClientInput,myServerOutput, inputArray);
+                    ddel1RequestRecieved(myClientInput, myServerOutput, inputArray);
                     break;
                 case "ddel2":
-                    ddel2RequestRecieved(myClientInput,myServerOutput, inputArray);
+                    ddel2RequestRecieved(myClientInput, myServerOutput, inputArray);
                     break;
                 case "ddelabort":
-                    ddelabortRequestRecieved(myClientInput,myServerOutput, inputArray);
+                    ddelabortRequestRecieved(myClientInput, myServerOutput, inputArray);
                     break;
                 case "getdnodes":
-                    getdnodesRequestRecieved(myClientInput,myServerOutput, inputArray);
+                    getdnodesRequestRecieved(myClientInput, myServerOutput, inputArray);
                     break;
                 default:
                     System.out.println("Request not recognized");
@@ -70,19 +70,56 @@ public class RequestHandler extends Thread
             myServerOutput.println("Connection closed");
             myClientInput.close();
             myServerOutput.close();
-            myClientSocket.close();   
+            myClientSocket.close();
         } catch (Exception e) {
             System.out.println(e);
         }
     }
-    
-    public void putRequestRecieved(BufferedReader myClientInput, PrintWriter myServerOutput, String[] inputArray)
+
+    public void putRequestRecieved(BufferedReader myClientInput, PrintWriter myServerOutput, String[] inputArray) 
     {
+        int voteCount = 0;
         String[] putKeyValueArray = inputArray[1].split("=");
-        System.out.print("PUT Key = " + putKeyValueArray[0]);
-        System.out.println(", Value = " + putKeyValueArray[1]);
-        myServerOutput.println("PUT Key = " + putKeyValueArray[0]);
-        myServerOutput.println(", Value = " + putKeyValueArray[1]);   
+        System.out.println("Sending Commit request to all server nodes...");
+        myServerOutput.println("Sending Commit request to all server nodes...");
+        for (Map.Entry<String, Integer> entry : Main.myNodes.entrySet()) 
+        {
+            String myIpAddress = entry.getKey();
+            Integer myPort = entry.getValue();
+            ServerRequests myRequest = new ServerRequests(myIpAddress, myPort);
+            voteCount = voteCount + myRequest.sendCommitRequest(putKeyValueArray[0], putKeyValueArray[1]);
+        }
+        System.out.println("VoteCount = " + voteCount + ", Expected Count " + (Main.myNodes.size()-1));
+        myServerOutput.println("VoteCount = " + voteCount + ", Expected Count " + (Main.myNodes.size()-1));
+        
+        if (voteCount == (Main.myNodes.size()-1)) 
+        {
+            System.out.println("Recieved all nessecary votes sending commit to all server nodes...");
+            myServerOutput.println("Recieved all nessecary votes sending commit to all server nodes...");
+            for (Map.Entry<String, Integer> entry : Main.myNodes.entrySet()) 
+            {
+                String myIpAddress = entry.getKey();
+                Integer myPort = entry.getValue();
+                System.out.print("GETDNODES Key = " + myIpAddress);
+                System.out.println(", Value = " + myPort + " ");
+                myServerOutput.println("GETDNODES Key = " + myIpAddress);
+                myServerOutput.println(", Value = " + myPort + " ");
+                ServerRequests myRequest = new ServerRequests(myIpAddress, myPort);
+                System.out.print(myRequest.sendCommitConfirmed(putKeyValueArray[0], putKeyValueArray[1]));
+            }
+        } 
+        else 
+        {
+            System.out.println("Did not recieved all nessecary votes sending abort to all server nodes...");
+            myServerOutput.println("Did not recieved all nessecary votes sending abort to all server nodes...");
+            for (Map.Entry<String, Integer> entry : Main.myNodes.entrySet()) 
+            {
+                String myIpAddress = entry.getKey();
+                Integer myPort = entry.getValue();
+                ServerRequests myRequest = new ServerRequests(myIpAddress, myPort);
+                voteCount = voteCount + myRequest.sendAbortPutRequest(putKeyValueArray[0], putKeyValueArray[1]);
+            }
+        }  
     }
     
     public void getRequestRecieved(BufferedReader myClientInput, PrintWriter myServerOutput, String[] inputArray)
@@ -94,9 +131,48 @@ public class RequestHandler extends Thread
     
     public void delRequestRecieved(BufferedReader myClientInput, PrintWriter myServerOutput, String[] inputArray)
     {
-        String[] delKeyValueArray = inputArray[1].split("=");
-        System.out.println("DEL Key = " + delKeyValueArray[0]);
-        myServerOutput.println("DEL Key = " + delKeyValueArray[0]);   
+        int voteCount = 0;
+        String[] putKeyValueArray = inputArray[1].split("=");
+        System.out.println("Sending Delete request to all server nodes...");
+        myServerOutput.println("Sending Delete request to all server nodes...");
+        for (Map.Entry<String, Integer> entry : Main.myNodes.entrySet()) 
+        {
+            String myIpAddress = entry.getKey();
+            Integer myPort = entry.getValue();
+            ServerRequests myRequest = new ServerRequests(myIpAddress, myPort);
+            voteCount = voteCount + myRequest.sendDeleteRequest(putKeyValueArray[0]);
+        }
+        System.out.println("VoteCount = " + voteCount + ", Expected Count " + (Main.myNodes.size()-1));
+        myServerOutput.println("VoteCount = " + voteCount + ", Expected Count " + (Main.myNodes.size()-1));
+        
+        if (voteCount == (Main.myNodes.size()-1)) 
+        {
+            System.out.println("Recieved all votes sending commit Delete to all server nodes...");
+            myServerOutput.println("Recieved all votes sending commit Delete to all server nodes...");
+            for (Map.Entry<String, Integer> entry : Main.myNodes.entrySet()) 
+            {
+                String myIpAddress = entry.getKey();
+                Integer myPort = entry.getValue();
+                System.out.print("GETDNODES Key = " + myIpAddress);
+                System.out.println(", Value = " + myPort + " ");
+                myServerOutput.println("GETDNODES Key = " + myIpAddress);
+                myServerOutput.println(", Value = " + myPort + " ");
+                ServerRequests myRequest = new ServerRequests(myIpAddress, myPort);
+                System.out.print(myRequest.sendDeleteConfirmed(putKeyValueArray[0]));
+            }
+        } 
+        else 
+        {
+            System.out.println("Did not recieved all votes sending abort Delete to all server nodes...");
+            myServerOutput.println("Did not recieved all votes sending abort Delete to all server nodes...");
+            for (Map.Entry<String, Integer> entry : Main.myNodes.entrySet()) 
+            {
+                String myIpAddress = entry.getKey();
+                Integer myPort = entry.getValue();
+                ServerRequests myRequest = new ServerRequests(myIpAddress, myPort);
+                voteCount = voteCount + myRequest.sendAbortDelRequest(putKeyValueArray[0], putKeyValueArray[1]);
+            }
+        }    
     }
     
     public void storeRequestRecieved(BufferedReader myClientInput, PrintWriter myServerOutput, String[] inputArray)
