@@ -2,6 +2,11 @@
 <project-private xmlns="http://www.netbeans.org/ns/project-private/1">
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
-        <group/>
+        <group>
+            <file>file:/Users/jeffreylytle/Documents/School/TCSS-558/Assignment_2_558_v1/Server/GenericNode/src/RequestHandler.java</file>
+            <file>file:/Users/jeffreylytle/Documents/School/TCSS-558/Assignment_2_558_v1/Server/GenericNode/src/MySocketServer.java</file>
+            <file>file:/Users/jeffreylytle/Documents/School/TCSS-558/Assignment_2_558_v1/Server/GenericNode/src/ServerRequests.java</file>
+            <file>file:/Users/jeffreylytle/Documents/School/TCSS-558/Assignment_2_558_v1/Server/GenericNode/src/Main.java</file>
+        </group>
     </open-files>
 </project-private>
