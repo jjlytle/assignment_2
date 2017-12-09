@@ -20,10 +20,19 @@ docker build -t 558_client .
 cd ~/Desktop/a1_Dockerfiles/assignment_2/docker_server
 docker build -t 558_server .
 
+cd ~/Desktop/a1_Dockerfiles/assignment_2/docker_haproxy
+docker build -t haproxy1 .
+
 cd ~/Desktop/a1_Dockerfiles/assignment_2/build
 docker run -d --rm -v $(pwd):/testCode --name myClient 558_client
 sleep 1
-docker run -d --rm -v $(pwd):/testCode --name myServer 558_server
+docker run -d --rm -v $(pwd):/testCode --name myServer1 558_server
+sleep 1
+docker run -d --rm -v $(pwd):/testCode --name myServer2 558_server
+sleep 1
+docker run -d --rm -v $(pwd):/testCode --name myServer3 558_server
+sleep 1
+docker run -d --rm --name myHaproxy haproxy1
 docker container ls
-
+./get_IP.sh
 docker exec -it myClient bash

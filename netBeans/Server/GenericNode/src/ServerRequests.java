@@ -1,8 +1,11 @@
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -14,33 +17,43 @@ import java.net.Socket;
  *
  * @author jeffreylytle
  */
-public class ServerRequests {
+public class ServerRequests{
     
     private String machineName;
     private int portNumber;
     private String myKey;
     private String myValue;
     private int commitConfirmed;
+    Socket myClient;
+    BufferedReader myServerInput;
+    PrintWriter myClientOutput;
 
     ServerRequests(String myIpAddress, Integer myPort) {
-        this.machineName = machineName;
-        this.portNumber = portNumber;
-        commitConfirmed = -1;       
+        this.machineName = myIpAddress;
+        this.portNumber = myPort;
+        try {
+            //commitConfirmed = -1;
+            myClient = new Socket(machineName, portNumber);
+            myServerInput = new BufferedReader(new InputStreamReader(myClient.getInputStream()));
+            myClientOutput = new PrintWriter(myClient.getOutputStream(), true);
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+        
     }
+
     
     public int sendCommitRequest(String key, String value)
     {
         String requestMethod = "dput1";
         this.myKey = key;
         this.myValue = value;
-        Socket myClient;
-        BufferedReader myServerInput;
-        PrintWriter myClientOutput;
+        
         
         try {
-            myClient = new Socket(machineName, portNumber);
-            myServerInput = new BufferedReader(new InputStreamReader(myClient.getInputStream()));
-            myClientOutput = new PrintWriter(myClient.getOutputStream(), true);
+            //myClient = new Socket(machineName, portNumber);
+            //myServerInput = new BufferedReader(new InputStreamReader(myClient.getInputStream()));
+            //myClientOutput = new PrintWriter(myClient.getOutputStream(), true);
             myClientOutput.println(requestMethod + ":" + myKey + "=" + myValue);
             myClientOutput.flush();
             String serverInput = myServerInput.readLine();
@@ -67,14 +80,14 @@ public class ServerRequests {
         this.myKey = key;
         this.myValue = value;
         String serverInput = null;
-        Socket myClient;
-        BufferedReader myServerInput;
-        PrintWriter myClientOutput;
+        //Socket myClient;
+        //BufferedReader myServerInput;
+        //PrintWriter myClientOutput;
         
         try {
-            myClient = new Socket(machineName, portNumber);
-            myServerInput = new BufferedReader(new InputStreamReader(myClient.getInputStream()));
-            myClientOutput = new PrintWriter(myClient.getOutputStream(), true);
+            //myClient = new Socket(machineName, portNumber);
+            //myServerInput = new BufferedReader(new InputStreamReader(myClient.getInputStream()));
+            //myClientOutput = new PrintWriter(myClient.getOutputStream(), true);
             myClientOutput.println(requestMethod + ":" + myKey + "=" + myValue);
             myClientOutput.flush();
             serverInput = myServerInput.readLine();
@@ -92,14 +105,14 @@ public class ServerRequests {
         String requestMethod = "dputabort";
         this.myKey = key;
         this.myValue = value;
-        Socket myClient;
-        BufferedReader myServerInput;
-        PrintWriter myClientOutput;
+        //Socket myClient;
+        //BufferedReader myServerInput;
+        //PrintWriter myClientOutput;
         
         try {
-            myClient = new Socket(machineName, portNumber);
-            myServerInput = new BufferedReader(new InputStreamReader(myClient.getInputStream()));
-            myClientOutput = new PrintWriter(myClient.getOutputStream(), true);
+            //myClient = new Socket(machineName, portNumber);
+            //myServerInput = new BufferedReader(new InputStreamReader(myClient.getInputStream()));
+            //myClientOutput = new PrintWriter(myClient.getOutputStream(), true);
             myClientOutput.println(requestMethod + ":" + myKey + "=" + myValue);
             myClientOutput.flush();
             String serverInput = myServerInput.readLine();
@@ -124,14 +137,14 @@ public class ServerRequests {
     {
         String requestMethod = "dput1";
         this.myKey = key;
-        Socket myClient;
-        BufferedReader myServerInput;
-        PrintWriter myClientOutput;
+        //Socket myClient;
+        //BufferedReader myServerInput;
+        //PrintWriter myClientOutput;
         
         try {
-            myClient = new Socket(machineName, portNumber);
-            myServerInput = new BufferedReader(new InputStreamReader(myClient.getInputStream()));
-            myClientOutput = new PrintWriter(myClient.getOutputStream(), true);
+            //myClient = new Socket(machineName, portNumber);
+            //myServerInput = new BufferedReader(new InputStreamReader(myClient.getInputStream()));
+            //myClientOutput = new PrintWriter(myClient.getOutputStream(), true);
             myClientOutput.println(requestMethod + ":" + myKey);
             myClientOutput.flush();
             String serverInput = myServerInput.readLine();
@@ -157,14 +170,14 @@ public class ServerRequests {
         String requestMethod = "ddel2";
         this.myKey = key;
         String serverInput = null;
-        Socket myClient;
-        BufferedReader myServerInput;
-        PrintWriter myClientOutput;
+        //Socket myClient;
+        //BufferedReader myServerInput;
+        //PrintWriter myClientOutput;
         
         try {
-            myClient = new Socket(machineName, portNumber);
-            myServerInput = new BufferedReader(new InputStreamReader(myClient.getInputStream()));
-            myClientOutput = new PrintWriter(myClient.getOutputStream(), true);
+            //myClient = new Socket(machineName, portNumber);
+            //myServerInput = new BufferedReader(new InputStreamReader(myClient.getInputStream()));
+            //myClientOutput = new PrintWriter(myClient.getOutputStream(), true);
             myClientOutput.println(requestMethod + ":" + myKey);
             myClientOutput.flush();
             serverInput = myServerInput.readLine();
@@ -182,14 +195,14 @@ public class ServerRequests {
         String requestMethod = "dputabort";
         this.myKey = key;
         this.myValue = value;
-        Socket myClient;
-        BufferedReader myServerInput;
-        PrintWriter myClientOutput;
+        //Socket myClient;
+        //BufferedReader myServerInput;
+        //PrintWriter myClientOutput;
         
         try {
-            myClient = new Socket(machineName, portNumber);
-            myServerInput = new BufferedReader(new InputStreamReader(myClient.getInputStream()));
-            myClientOutput = new PrintWriter(myClient.getOutputStream(), true);
+            //myClient = new Socket(machineName, portNumber);
+            //myServerInput = new BufferedReader(new InputStreamReader(myClient.getInputStream()));
+            //myClientOutput = new PrintWriter(myClient.getOutputStream(), true);
             myClientOutput.println(requestMethod + ":" + myKey + "=" + myValue);
             myClientOutput.flush();
             String serverInput = myServerInput.readLine();

@@ -3,15 +3,24 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class RequestHandler extends Thread
 {
     private final Socket myClientSocket;
-    RequestHandler(Socket myClientSocket) 
+    private ConcurrentHashMap myConcurrentHashMap;
+    private static ReadWriteLock readWriteLock;
+    
+    RequestHandler(Socket myClientSocket, ConcurrentHashMap myConcurrentHashMap) 
     {
         this.myClientSocket = myClientSocket;
+        this.myConcurrentHashMap = myConcurrentHashMap;
+        readWriteLock = new ReentrantReadWriteLock();
     }
     
     @Override
@@ -76,42 +85,52 @@ public class RequestHandler extends Thread
         }
     }
 
-    public void putRequestRecieved(BufferedReader myClientInput, PrintWriter myServerOutput, String[] inputArray) 
+    public synchronized void putRequestRecieved(BufferedReader myClientInput, PrintWriter myServerOutput, String[] inputArray) 
     {
+        
+        //todo make sure that it does not send a dput request to itself i.e. remove itself from node list
+        
         int voteCount = 0;
         String[] putKeyValueArray = inputArray[1].split("=");
-        System.out.println("Sending Commit request to all server nodes...");
-        myServerOutput.println("Sending Commit request to all server nodes...");
+        System.out.println("Sending Put Commit request to all server nodes...");
+        myServerOutput.println("Sending Put Commit request to all server nodes...");
         for (Map.Entry<String, Integer> entry : Main.myNodes.entrySet()) 
         {
             String myIpAddress = entry.getKey();
             Integer myPort = entry.getValue();
+            System.out.println("----" + myIpAddress + "----" + myPort + "----");
             ServerRequests myRequest = new ServerRequests(myIpAddress, myPort);
             voteCount = voteCount + myRequest.sendCommitRequest(putKeyValueArray[0], putKeyValueArray[1]);
+            //startSender(myIpAddress, myPort, putKeyValueArray[0], putKeyValueArray[1]);
         }
-        System.out.println("VoteCount = " + voteCount + ", Expected Count " + (Main.myNodes.size()-1));
-        myServerOutput.println("VoteCount = " + voteCount + ", Expected Count " + (Main.myNodes.size()-1));
+        System.out.println("VoteCount = " + voteCount + ", Expected Count " + Main.myNodes.size());
+        myServerOutput.println("VoteCount = " + voteCount + ", Expected Count " + Main.myNodes.size());
         
-        if (voteCount == (Main.myNodes.size()-1)) 
+        if (voteCount == Main.myNodes.size()) 
         {
-            System.out.println("Recieved all nessecary votes sending commit to all server nodes...");
-            myServerOutput.println("Recieved all nessecary votes sending commit to all server nodes...");
+            System.out.println("Recieved all votes sending put commit to all server nodes...");
+            myServerOutput.println("Recieved all votes sending put commit to all server nodes...");
             for (Map.Entry<String, Integer> entry : Main.myNodes.entrySet()) 
             {
                 String myIpAddress = entry.getKey();
                 Integer myPort = entry.getValue();
-                System.out.print("GETDNODES Key = " + myIpAddress);
-                System.out.println(", Value = " + myPort + " ");
-                myServerOutput.println("GETDNODES Key = " + myIpAddress);
-                myServerOutput.println(", Value = " + myPort + " ");
                 ServerRequests myRequest = new ServerRequests(myIpAddress, myPort);
                 System.out.print(myRequest.sendCommitConfirmed(putKeyValueArray[0], putKeyValueArray[1]));
             }
+            try {
+                readWriteLock.writeLock().lock();
+                myConcurrentHashMap.putIfAbsent(putKeyValueArray[0], putKeyValueArray[1]);
+            } finally {
+                readWriteLock.writeLock().unlock();
+            }
+            
+            
         } 
         else 
         {
-            System.out.println("Did not recieved all nessecary votes sending abort to all server nodes...");
-            myServerOutput.println("Did not recieved all nessecary votes sending abort to all server nodes...");
+            System.out.println("Did not recieved all votes sending abort to all server nodes...");
+            myServerOutput.println("Did not recieved all votes sending abort to all server nodes...");
+            voteCount = 0;
             for (Map.Entry<String, Integer> entry : Main.myNodes.entrySet()) 
             {
                 String myIpAddress = entry.getKey();
@@ -125,12 +144,14 @@ public class RequestHandler extends Thread
     public void getRequestRecieved(BufferedReader myClientInput, PrintWriter myServerOutput, String[] inputArray)
     {
         String[] getKeyValueArray = inputArray[1].split("=");
-        System.out.println("GET Key = " + getKeyValueArray[0]);
-        myServerOutput.println("GET Key = " + getKeyValueArray[0]);   
+        String value = (String) myConcurrentHashMap.get(getKeyValueArray[0]);
+        System.out.println("GET Key = " + getKeyValueArray[0] + ", Value = " + value);
+        myServerOutput.println("GET Key = " + getKeyValueArray[0] + ", Value = " + value);   
     }
     
-    public void delRequestRecieved(BufferedReader myClientInput, PrintWriter myServerOutput, String[] inputArray)
+    public synchronized void delRequestRecieved(BufferedReader myClientInput, PrintWriter myServerOutput, String[] inputArray)
     {
+        // todo make sure this sever removes it self from the node list
         int voteCount = 0;
         String[] putKeyValueArray = inputArray[1].split("=");
         System.out.println("Sending Delete request to all server nodes...");
@@ -142,10 +163,10 @@ public class RequestHandler extends Thread
             ServerRequests myRequest = new ServerRequests(myIpAddress, myPort);
             voteCount = voteCount + myRequest.sendDeleteRequest(putKeyValueArray[0]);
         }
-        System.out.println("VoteCount = " + voteCount + ", Expected Count " + (Main.myNodes.size()-1));
-        myServerOutput.println("VoteCount = " + voteCount + ", Expected Count " + (Main.myNodes.size()-1));
+        System.out.println("VoteCount = " + voteCount + ", Expected Count " + Main.myNodes.size());
+        myServerOutput.println("VoteCount = " + voteCount + ", Expected Count " + Main.myNodes.size());
         
-        if (voteCount == (Main.myNodes.size()-1)) 
+        if (voteCount == Main.myNodes.size()) 
         {
             System.out.println("Recieved all votes sending commit Delete to all server nodes...");
             myServerOutput.println("Recieved all votes sending commit Delete to all server nodes...");
@@ -153,18 +174,23 @@ public class RequestHandler extends Thread
             {
                 String myIpAddress = entry.getKey();
                 Integer myPort = entry.getValue();
-                System.out.print("GETDNODES Key = " + myIpAddress);
-                System.out.println(", Value = " + myPort + " ");
-                myServerOutput.println("GETDNODES Key = " + myIpAddress);
-                myServerOutput.println(", Value = " + myPort + " ");
                 ServerRequests myRequest = new ServerRequests(myIpAddress, myPort);
                 System.out.print(myRequest.sendDeleteConfirmed(putKeyValueArray[0]));
             }
+            try {
+                readWriteLock.writeLock().lock();
+                myConcurrentHashMap.remove(putKeyValueArray[0]);
+            } finally {
+                readWriteLock.writeLock().unlock();
+            }
+            
+            
         } 
         else 
         {
             System.out.println("Did not recieved all votes sending abort Delete to all server nodes...");
             myServerOutput.println("Did not recieved all votes sending abort Delete to all server nodes...");
+            voteCount = 0;
             for (Map.Entry<String, Integer> entry : Main.myNodes.entrySet()) 
             {
                 String myIpAddress = entry.getKey();
@@ -177,65 +203,95 @@ public class RequestHandler extends Thread
     
     public void storeRequestRecieved(BufferedReader myClientInput, PrintWriter myServerOutput, String[] inputArray)
     {
+        //todo send and print keyset and valueset
         System.out.println(inputArray[0]);
-        myServerOutput.println(inputArray[0]);   
+        myServerOutput.println(inputArray[0]);
+        Set keys = myConcurrentHashMap.keySet();
+        for (Iterator i = keys.iterator(); i.hasNext();) {
+            String key = (String) i.next();
+            String value = (String) myConcurrentHashMap.get(key);
+            System.out.print("PUT Key = " + key);
+            System.out.println(", Value = " + value);
+            myServerOutput.println("PUT Key = " + key);
+            myServerOutput.println(", Value = " + value);
+        }
     }
     
     public void exitRequestRecieved(BufferedReader myClientInput, PrintWriter myServerOutput, String[] inputArray)
     {
+        //complete
         System.out.println(inputArray[0]);
         myServerOutput.println(inputArray[0]);
         Main.isServerUp = false;   
     }
     
-    public void dput1RequestRecieved(BufferedReader myClientInput, PrintWriter myServerOutput, String[] inputArray)
-    {
+    public synchronized void dput1RequestRecieved(BufferedReader myClientInput, PrintWriter myServerOutput, String[] inputArray) {
         String[] dput1KeyValueArray = inputArray[1].split("=");
-        System.out.print("PUT Key = " + dput1KeyValueArray[0]);
-        System.out.println(", Value = " + dput1KeyValueArray[1]);
-        myServerOutput.println("PUT Key = " + dput1KeyValueArray[0]);
-        myServerOutput.println(", Value = " + dput1KeyValueArray[1]);  
+        System.out.println("Testing lock");
+
+        try {
+            //readWriteLock.writeLock().lock();
+            myServerOutput.println("commited");
+            System.out.print("PUT Key = " + dput1KeyValueArray[0] + " Locked...");
+        } catch (Exception e) {
+            myServerOutput.println("abort");
+        }
+
     }
         
-    public void dput2RequestRecieved(BufferedReader myClientInput, PrintWriter myServerOutput, String[] inputArray)
+    public synchronized void dput2RequestRecieved(BufferedReader myClientInput, PrintWriter myServerOutput, String[] inputArray)
     {
         String[] dput2KeyValueArray = inputArray[1].split("=");
-        System.out.print("PUT Key = " + dput2KeyValueArray[0]);
-        System.out.println(", Value = " + dput2KeyValueArray[1]);
-        myServerOutput.println("PUT Key = " + dput2KeyValueArray[0]);
-        myServerOutput.println(", Value = " + dput2KeyValueArray[1]);   
+        try {
+            myConcurrentHashMap.putIfAbsent(dput2KeyValueArray[0], dput2KeyValueArray[1]);
+            System.out.print("PUT Key = " + dput2KeyValueArray[0]);
+            System.out.println(", Value = " + dput2KeyValueArray[1]);
+            myServerOutput.println("PUT Key = " + dput2KeyValueArray[0]);
+            myServerOutput.println(", Value = " + dput2KeyValueArray[1]);    
+        } finally {
+            //readWriteLock.writeLock().unlock();
+        }
     }
     
-    public void dputabortRequestRecieved(BufferedReader myClientInput, PrintWriter myServerOutput, String[] inputArray)
+    public synchronized void dputabortRequestRecieved(BufferedReader myClientInput, PrintWriter myServerOutput, String[] inputArray)
     {
-        String[] dputabortKeyValueArray = inputArray[1].split("=");
-        System.out.print("PUT Key = " + dputabortKeyValueArray[0]);
-        System.out.println(", Value = " + dputabortKeyValueArray[1]);
-        myServerOutput.println("PUT Key = " + dputabortKeyValueArray[0]);
-        myServerOutput.println(", Value = " + dputabortKeyValueArray[1]);
+        //String[] dputabortKeyValueArray = inputArray[1].split("=");
+        //readWriteLock.writeLock().unlock();
+        myServerOutput.println("aborted");
+        // todo release locked coherent hashmap
     }
     
-    public void ddel1RequestRecieved(BufferedReader myClientInput, PrintWriter myServerOutput, String[] inputArray)
-    {
-        String[] ddel1KeyValueArray = inputArray[1].split("=");
-        System.out.println("GET Key = " + ddel1KeyValueArray[0]);
-        myServerOutput.println("GET Key = " + ddel1KeyValueArray[0]);
+    public synchronized void ddel1RequestRecieved(BufferedReader myClientInput, PrintWriter myServerOutput, String[] inputArray) {
+        String[] dput1KeyValueArray = inputArray[1].split("=");
+
+        try {
+            //readWriteLock.writeLock().lock();
+            myServerOutput.println("commited");
+            System.out.print("DEL Key = " + dput1KeyValueArray[0] + " Locked...");
+        } catch (Exception e) {
+            myServerOutput.println("abort");
+        }
+
     }
     
-    public void ddel2RequestRecieved(BufferedReader myClientInput, PrintWriter myServerOutput, String[] inputArray)
+    public synchronized void ddel2RequestRecieved(BufferedReader myClientInput, PrintWriter myServerOutput, String[] inputArray)
     {
-        String[] ddel2KeyValueArray = inputArray[1].split("=");
-        System.out.println("GET Key = " + ddel2KeyValueArray[0]);
-        myServerOutput.println("GET Key = " + ddel2KeyValueArray[0]);   
+        String[] dput2KeyValueArray = inputArray[1].split("=");
+        try {
+            myConcurrentHashMap.remove(dput2KeyValueArray[0]);
+            System.out.print("DEL Key = " + dput2KeyValueArray[0]);
+            myServerOutput.println("DEL Key = " + dput2KeyValueArray[0]);    
+        } finally {
+            //readWriteLock.writeLock().unlock();
+        }
     }
     
-    public void ddelabortRequestRecieved(BufferedReader myClientInput, PrintWriter myServerOutput, String[] inputArray)
+    public synchronized void ddelabortRequestRecieved(BufferedReader myClientInput, PrintWriter myServerOutput, String[] inputArray)
     {
-        String[] ddelabortKeyValueArray = inputArray[1].split("=");
-        System.out.print("PUT Key = " + ddelabortKeyValueArray[0]);
-        System.out.println(", Value = " + ddelabortKeyValueArray[1]);
-        myServerOutput.println("PUT Key = " + ddelabortKeyValueArray[0]);
-        myServerOutput.println(", Value = " + ddelabortKeyValueArray[1]);
+        //String[] ddelabortKeyValueArray = inputArray[1].split("=");
+        //readWriteLock.writeLock().unlock();
+        myServerOutput.println("aborted");
+        // relese locked cohernt hasmap
     }
 
     public void getdnodesRequestRecieved(BufferedReader myClientInput, PrintWriter myServerOutput, String[] inputArray) {
@@ -248,5 +304,6 @@ public class RequestHandler extends Thread
             myServerOutput.println(", Value = " + value + " ");
         }
     }
+
 
 }

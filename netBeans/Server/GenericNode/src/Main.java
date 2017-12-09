@@ -4,17 +4,29 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Main 
 {
 
     private static int portNumber;
     public static boolean isServerUp = true;
-    public static Map<String, Integer> myNodes = new HashMap<String, Integer>();
+    public static Map<String, Integer> myNodes = null;
+    public static InetAddress ip;
+    
     public static void main(String[] args) 
     {
+        try {
+            ip = InetAddress.getLocalHost();
+        } catch (Exception e) {
+            System.out.println("Could not get ost ip for some reason");
+        }
+        myNodes = new HashMap<>();
         if( args.length < 2 )
         {
             System.out.println("Error: Missing required arguments");
@@ -33,7 +45,7 @@ public class Main
         while(isServerUp)
         {
             try {
-                Thread.sleep(60000);
+                Thread.sleep(5000);
                 getNodes();
             } catch (Exception e) {
                 System.out.println(e);
@@ -51,7 +63,10 @@ public class Main
 	String inputLine = null;
 	while ((inputLine = br.readLine()) != null) {
 		String[] inputArray = inputLine.split(":");
-                myNodes.put(inputArray[0], Integer.parseInt(inputArray[1]));               
+                if(!inputArray[0].equals(ip.getHostAddress()))
+                {
+                    myNodes.put(inputArray[0], Integer.parseInt(inputArray[1])); 
+                }
 	}
  
 	br.close();
